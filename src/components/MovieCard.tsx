@@ -80,8 +80,7 @@ export function MovieCard({ item, type }: MovieCardProps) {
       
       <div className="absolute bottom-4 right-4">
         <button
-            className={`p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110 ${
-            }
+          onClick={handleCartAction}
           className={`p-2 rounded-full shadow-lg transition-all duration-200 ${
             inCart
               ? 'bg-green-500 hover:bg-green-600 text-white'
