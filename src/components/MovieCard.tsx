@@ -95,8 +95,7 @@ export function MovieCard({ item, type }: MovieCardProps) {
         show={showAnimation} 
         onComplete={() => setShowAnimation(false)} 
       />
-    </>
     </div>
+    </>
   );
-}
 }
