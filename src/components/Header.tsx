@@ -22,8 +22,8 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
             <Link to="/" className="flex items-center space-x-2 hover:text-blue-200 transition-colors">
-              <Film className="h-8 w-8" />
-              <span className="font-bold text-xl hidden sm:block">MovieDB</span>
+              <img src="/unnamed.png" alt="TV a la Carta" className="h-8 w-8" />
+              <span className="font-bold text-xl hidden sm:block">TV a la Carta</span>
             </Link>
             
             <nav className="hidden md:flex space-x-6">
