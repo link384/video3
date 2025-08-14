@@ -11,30 +11,6 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowLeft') {
-        goToPrevious();
-      } else if (event.key === 'ArrowRight') {
-        goToNext();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
-
-  useEffect(() => {
-    if (!isAutoPlaying || items.length === 0) return;
-
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % items.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [items.length, isAutoPlaying]);
-
   const goToPrevious = () => {
     setCurrentIndex((prevIndex) => 
       prevIndex === 0 ? items.length - 1 : prevIndex - 1
@@ -48,6 +24,30 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
   const goToSlide = (index: number) => {
     setCurrentIndex(index);
   };
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        goToPrevious();
+      } else if (event.key === 'ArrowRight') {
+        goToNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [items.length]);
+
+  useEffect(() => {
+    if (!isAutoPlaying || items.length === 0) return;
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % items.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [items.length, isAutoPlaying]);
 
   if (items.length === 0) return null;
 

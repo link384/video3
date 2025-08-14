@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Star, Calendar, Tv, Plus, Check, Play } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, Tv, Plus, Check, Play, ChevronDown } from 'lucide-react';
 import { tmdbService } from '../services/tmdb';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { useCart } from '../context/CartContext';
 import { IMAGE_BASE_URL, BACKDROP_SIZE } from '../config/api';
-import type { TVShowDetails, Video, CartItem } from '../types/movie';
+import type { TVShowDetails, Video, CartItem, Season } from '../types/movie';
 
 export function TVDetail() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +15,8 @@ export function TVDetail() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [showVideo, setShowVideo] = useState(false);
+  const [selectedSeasons, setSelectedSeasons] = useState<number[]>([]);
+  const [showSeasonSelector, setShowSeasonSelector] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { addItem, removeItem, isInCart } = useCart();
@@ -55,12 +57,38 @@ export function TVDetail() {
     }
   }, [tvId]);
 
+  const handleSeasonToggle = (seasonNumber: number) => {
+    setSelectedSeasons(prev => {
+      if (prev.includes(seasonNumber)) {
+        return prev.filter(s => s !== seasonNumber);
+      } else {
+        return [...prev, seasonNumber];
+      }
+    });
+  };
+
+  const selectAllSeasons = () => {
+    if (!tvShow) return;
+    const allSeasonNumbers = tvShow.seasons
+      .filter(season => season.season_number > 0)
+      .map(season => season.season_number);
+    setSelectedSeasons(allSeasonNumbers);
+  };
+
+  const clearAllSeasons = () => {
+    setSelectedSeasons([]);
+  };
+
   const handleCartAction = () => {
     if (!tvShow) return;
 
+    const seasonsText = selectedSeasons.length > 0 
+      ? ` (Temporadas: ${selectedSeasons.sort((a, b) => a - b).join(', ')})`
+      : '';
+
     const cartItem: CartItem = {
       id: tvShow.id,
-      title: tvShow.name,
+      title: tvShow.name + seasonsText,
       poster_path: tvShow.poster_path,
       type: 'tv',
       first_air_date: tvShow.first_air_date,
@@ -227,6 +255,71 @@ export function TVDetail() {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
+              {/* Season Selection */}
+              {tvShow.seasons && tvShow.seasons.filter(s => s.season_number > 0).length > 1 && (
+                <div className="mb-6">
+                  <button
+                    onClick={() => setShowSeasonSelector(!showSeasonSelector)}
+                    className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <span className="font-medium text-gray-900">
+                      Seleccionar Temporadas
+                      {selectedSeasons.length > 0 && (
+                        <span className="ml-2 text-sm text-blue-600">
+                          ({selectedSeasons.length} seleccionadas)
+                        </span>
+                      )}
+                    </span>
+                    <ChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${
+                      showSeasonSelector ? 'rotate-180' : ''
+                    }`} />
+                  </button>
+                  
+                  {showSeasonSelector && (
+                    <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
+                      <div className="flex gap-2 mb-3">
+                        <button
+                          onClick={selectAllSeasons}
+                          className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded"
+                        >
+                          Todas
+                        </button>
+                        <button
+                          onClick={clearAllSeasons}
+                          className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded"
+                        >
+                          Ninguna
+                        </button>
+                      </div>
+                      {tvShow.seasons
+                        .filter(season => season.season_number > 0)
+                        .map((season) => (
+                          <label
+                            key={season.id}
+                            className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSeasons.includes(season.season_number)}
+                              onChange={() => handleSeasonToggle(season.season_number)}
+                              className="mr-3 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {season.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {season.episode_count} episodios
+                                {season.air_date && ` • ${new Date(season.air_date).getFullYear()}`}
+                              </p>
+                            </div>
+                          </label>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={handleCartAction}
                 className={`w-full mb-6 px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center ${

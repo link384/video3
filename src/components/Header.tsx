@@ -1,20 +1,38 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, ShoppingCart, Film } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { state } = useCart();
+
+  // Real-time search effect
+  React.useEffect(() => {
+    if (searchQuery.trim() && searchQuery.length > 2) {
+      const timeoutId = setTimeout(() => {
+        navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      }, 500); // 500ms delay for debouncing
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [searchQuery, navigate]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
     }
   };
+
+  // Clear search when navigating away from search page
+  React.useEffect(() => {
+    if (!location.pathname.includes('/search')) {
+      setSearchQuery('');
+    }
+  }, [location.pathname]);
 
   return (
     <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg sticky top-0 z-50">
