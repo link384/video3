@@ -131,7 +131,7 @@ export function Cart() {
                       </div>
                       <div className="flex items-center">
                         <Star className="h-4 w-4 mr-1 fill-yellow-400 text-yellow-400" />
-                        <span>{item.vote_average.toFixed(1)}</span>
+                        <span>{item.vote_average ? item.vote_average.toFixed(1) : 'N/A'}</span>
                       </div>
                     </div>
                   </div>
