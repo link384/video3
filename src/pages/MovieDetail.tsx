@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Star, Calendar, Clock, Plus, Check, Play } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, Clock, Plus, X, Play } from 'lucide-react';
 import { tmdbService } from '../services/tmdb';
 import { VideoPlayer } from '../components/VideoPlayer';
+import { PriceCard } from '../components/PriceCard';
+import { CastSection } from '../components/CastSection';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { useCart } from '../context/CartContext';
 import { IMAGE_BASE_URL, BACKDROP_SIZE } from '../config/api';
-import type { MovieDetails, Video, CartItem } from '../types/movie';
+import type { MovieDetails, Video, CartItem, CastMember } from '../types/movie';
 
 export function MovieDetail() {
   const { id } = useParams<{ id: string }>();
   const [movie, setMovie] = useState<MovieDetails | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [cast, setCast] = useState<CastMember[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [showVideo, setShowVideo] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,16 +25,22 @@ export function MovieDetail() {
   const movieId = parseInt(id || '0');
   const inCart = isInCart(movieId);
 
+  // Detectar si es anime
+  const isAnime = movie?.original_language === 'ja' || 
+                 (movie?.genres && movie.genres.some(g => g.name.toLowerCase().includes('animat')));
+
   useEffect(() => {
     const fetchMovieData = async () => {
       try {
         setLoading(true);
-        const [movieData, videoData] = await Promise.all([
+        const [movieData, videoData, creditsData] = await Promise.all([
           tmdbService.getMovieDetails(movieId),
-          tmdbService.getMovieVideos(movieId)
+          tmdbService.getMovieVideos(movieId),
+          tmdbService.getMovieCredits(movieId)
         ]);
 
         setMovie(movieData);
+        setCast(creditsData.cast || []);
         
         // Filter for trailers and teasers
         const trailers = videoData.results.filter(
@@ -65,6 +74,8 @@ export function MovieDetail() {
       type: 'movie',
       release_date: movie.release_date,
       vote_average: movie.vote_average,
+      original_language: movie.original_language,
+      genre_ids: movie.genres.map(g => g.id),
     };
 
     if (inCart) {
@@ -158,15 +169,27 @@ export function MovieDetail() {
           {/* Main Content */}
           <div className="lg:col-span-2">
             {/* Overview */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Sinopsis</h2>
-              <p className="text-gray-700 leading-relaxed">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border border-gray-100 p-8 mb-8 transform hover:scale-[1.02] transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-3 rounded-xl mr-4 shadow-lg">
+                  <span className="text-2xl">📚</span>
+                </div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Sinopsis
+                </h2>
+              </div>
+              <p className="text-gray-700 leading-relaxed text-lg mb-4">
                 {movie.overview || 'Sin descripción disponible.'}
               </p>
               {movie.tagline && (
-                <p className="text-gray-500 italic mt-4">"{movie.tagline}"</p>
+                <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border-l-4 border-gradient-to-b from-blue-400 to-purple-400">
+                  <p className="text-gray-600 italic text-lg font-medium">"{movie.tagline}"</p>
+                </div>
               )}
             </div>
+
+            {/* Cast Section */}
+            <CastSection cast={cast} title="Reparto Principal" />
 
             {/* Videos */}
             {videos.length > 0 && (
@@ -232,19 +255,29 @@ export function MovieDetail() {
 
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl border border-gray-100 overflow-hidden sticky top-8">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+                <h3 className="text-xl font-bold flex items-center">
+                  <div className="bg-white/20 p-2 rounded-lg mr-3">
+                    <span className="text-lg">🎬</span>
+                  </div>
+                  Detalles de la Película
+                </h3>
+              </div>
+              
+              <div className="p-6">
               <button
                 onClick={handleCartAction}
-                className={`w-full mb-6 px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center ${
+                className={`w-full mb-6 px-6 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center transform hover:scale-105 hover:shadow-lg ${
                   inCart
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white'
                 }`}
               >
                 {inCart ? (
                   <>
-                    <Check className="mr-2 h-5 w-5" />
-                    Agregada al Carrito
+                    <X className="mr-2 h-5 w-5" />
+                    Retirar del Carrito
                   </>
                 ) : (
                   <>
@@ -254,20 +287,42 @@ export function MovieDetail() {
                 )}
               </button>
 
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-1">Estado</h3>
-                  <p className="text-gray-700">{movie.status}</p>
+              {/* Price Card */}
+              <div className="mb-6">
+                <PriceCard 
+                  type="movie" 
+                  isAnime={isAnime}
+                />
+              </div>
+              <div className="space-y-6">
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-blue-200 transition-colors">
+                  <div className="flex items-center mb-2">
+                    <div className="bg-blue-100 p-2 rounded-lg mr-3 shadow-sm animate-pulse">
+                      <span className="text-sm">🎬</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Estado</h3>
+                  </div>
+                  <p className="text-gray-700 font-medium ml-11">{movie.status}</p>
                 </div>
                 
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-1">Idioma Original</h3>
-                  <p className="text-gray-700">{movie.original_language.toUpperCase()}</p>
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-purple-200 transition-colors">
+                  <div className="flex items-center mb-2">
+                    <div className="bg-purple-100 p-2 rounded-lg mr-3 shadow-sm animate-bounce">
+                      <span className="text-sm">🌐</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Idioma Original</h3>
+                  </div>
+                  <p className="text-gray-700 font-medium ml-11">{movie.original_language.toUpperCase()}</p>
                 </div>
                 
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-1">Presupuesto</h3>
-                  <p className="text-gray-700">
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-green-200 transition-colors">
+                  <div className="flex items-center mb-2">
+                    <div className="bg-green-100 p-2 rounded-lg mr-3 shadow-sm animate-pulse">
+                      <span className="text-sm">💵</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Presupuesto</h3>
+                  </div>
+                  <p className="text-gray-700 font-medium ml-11">
                     {movie.budget > 0
                       ? `$${movie.budget.toLocaleString()}`
                       : 'No disponible'
@@ -275,9 +330,14 @@ export function MovieDetail() {
                   </p>
                 </div>
                 
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-1">Recaudación</h3>
-                  <p className="text-gray-700">
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-yellow-200 transition-colors">
+                  <div className="flex items-center mb-2">
+                    <div className="bg-yellow-100 p-2 rounded-lg mr-3 shadow-sm animate-bounce">
+                      <span className="text-sm">💰</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Recaudación</h3>
+                  </div>
+                  <p className="text-gray-700 font-medium ml-11">
                     {movie.revenue > 0
                       ? `$${movie.revenue.toLocaleString()}`
                       : 'No disponible'
@@ -285,18 +345,58 @@ export function MovieDetail() {
                   </p>
                 </div>
 
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-pink-200 transition-colors">
+                  <div className="flex items-center mb-2">
+                    <div className="bg-pink-100 p-2 rounded-lg mr-3 shadow-sm animate-pulse">
+                      <span className="text-sm">🗳️</span>
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Votos</h3>
+                  </div>
+                  <p className="text-gray-700 font-medium ml-11">
+                    {movie.vote_count.toLocaleString()} votos
+                  </p>
+                </div>
+
                 {movie.production_companies.length > 0 && (
-                  <div>
-                    <h3 className="font-medium text-gray-900 mb-2">Productoras</h3>
-                    <div className="space-y-2">
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-indigo-200 transition-colors">
+                    <div className="flex items-center mb-3">
+                      <div className="bg-indigo-100 p-2 rounded-lg mr-3 shadow-sm animate-pulse">
+                        <span className="text-sm">🏭</span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900">Productoras</h3>
+                    </div>
+                    <div className="space-y-2 ml-11">
                       {movie.production_companies.slice(0, 3).map((company) => (
-                        <p key={company.id} className="text-gray-700 text-sm">
+                        <div key={company.id} className="bg-white rounded-lg p-2 border border-gray-200">
+                          <p className="text-gray-700 text-sm font-medium">
                           {company.name}
-                        </p>
+                          </p>
+                        </div>
                       ))}
                     </div>
                   </div>
                 )}
+
+                {movie.production_countries.length > 0 && (
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-orange-200 transition-colors">
+                    <div className="flex items-center mb-3">
+                      <div className="bg-orange-100 p-2 rounded-lg mr-3 shadow-sm animate-bounce">
+                        <span className="text-sm">🌍</span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900">Países</h3>
+                    </div>
+                    <div className="space-y-2 ml-11">
+                      {movie.production_countries.map((country) => (
+                        <div key={country.iso_3166_1} className="bg-white rounded-lg p-2 border border-gray-200">
+                          <p className="text-gray-700 text-sm font-medium">
+                            {country.name}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               </div>
             </div>
           </div>
