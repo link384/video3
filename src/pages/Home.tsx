@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, TrendingUp, Star, Tv, Filter, Calendar, Clock, Flame } from 'lucide-react';
+import { ChevronRight, TrendingUp, Star, Tv, Filter, Calendar, Clock, Flame, BookOpen } from 'lucide-react';
 import { tmdbService } from '../services/tmdb';
 import { MovieCard } from '../components/MovieCard';
 import { HeroCarousel } from '../components/HeroCarousel';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
+import { NovelasModal } from '../components/NovelasModal';
 import type { Movie, TVShow } from '../types/movie';
 
 type TrendingTimeWindow = 'day' | 'week';
@@ -20,6 +21,7 @@ export function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [showNovelasModal, setShowNovelasModal] = useState(false);
 
   const timeWindowLabels = {
     day: 'Hoy',
@@ -170,6 +172,13 @@ export function Home() {
               <Tv className="mr-2 h-5 w-5" />
               Ver Series
             </Link>
+            <button
+              onClick={() => setShowNovelasModal(true)}
+              className="bg-pink-600 hover:bg-pink-700 px-8 py-3 rounded-full font-semibold transition-all duration-300 hover:scale-105 flex items-center justify-center"
+            >
+              <BookOpen className="mr-2 h-5 w-5" />
+              Catálogo de Novelas
+            </button>
           </div>
         </div>
       </section>
@@ -285,6 +294,12 @@ export function Home() {
           <p>Última actualización: {lastUpdate.toLocaleString()}</p>
         </div>
       </div>
+      
+      {/* Modal de Novelas */}
+      <NovelasModal 
+        isOpen={showNovelasModal} 
+        onClose={() => setShowNovelasModal(false)} 
+      />
     </div>
   );
 }
