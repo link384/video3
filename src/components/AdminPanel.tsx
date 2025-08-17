@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Settings, DollarSign, BookOpen, Download, Upload, RotateCcw, Save, Plus, Edit3, Trash2, Eye, EyeOff, MapPin } from 'lucide-react';
+import { X, Settings, DollarSign, BookOpen, Download, Upload, RotateCcw, Save, Plus, Edit3, Trash2, Eye, EyeOff, MapPin, FileCode, CheckCircle, Info, AlertTriangle, XCircle } from 'lucide-react';
 import { useAdmin } from '../context/AdminContext';
 import type { NovelasConfig, DeliveryZoneConfig } from '../types/admin';
 
@@ -9,9 +9,10 @@ interface AdminPanelProps {
 }
 
 export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
-  const { state, logout, updatePricing, addNovela, updateNovela, deleteNovela, addDeliveryZone, updateDeliveryZone, deleteDeliveryZone, exportConfig, importConfig, resetToDefaults } = useAdmin();
+  const { state, logout, updatePricing, addNovela, updateNovela, deleteNovela, addDeliveryZone, updateDeliveryZone, deleteDeliveryZone, exportConfig, importConfig, resetToDefaults, showNotification, exportSystemFiles } = useAdmin();
   const [activeTab, setActiveTab] = useState<'pricing' | 'novelas' | 'delivery' | 'backup'>('pricing');
   const [showPassword, setShowPassword] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{ id: number; message: string; type: 'success' | 'info' | 'warning' | 'error' }>>([]);
   
   // Pricing form state
   const [pricingForm, setPricingForm] = useState(state.config.pricing);
@@ -41,12 +42,34 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   // Backup state
   const [importData, setImportData] = useState('');
 
+  // Manejar notificaciones
+  React.useEffect(() => {
+    const originalShowNotification = showNotification;
+    const enhancedShowNotification = (message: string, type: 'success' | 'info' | 'warning' | 'error') => {
+      const id = Date.now();
+      setNotifications(prev => [...prev, { id, message, type }]);
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+      }, 5000);
+    };
+    
+    // Reemplazar temporalmente la función
+    Object.defineProperty(useAdmin(), 'showNotification', {
+      value: enhancedShowNotification,
+      writable: true
+    });
+  }, []);
+
+  const removeNotification = (id: number) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
   if (!isOpen) return null;
 
   const handlePricingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updatePricing(pricingForm);
-    alert('Precios actualizados correctamente');
+    showNotification('Configuración de precios actualizada correctamente', 'success');
   };
 
   const handleNovelaSubmit = (e: React.FormEvent) => {
@@ -54,13 +77,13 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     if (editingNovela) {
       updateNovela(editingNovela, novelaForm);
       setEditingNovela(null);
-      alert('Novela actualizada correctamente');
+      showNotification('Novela actualizada correctamente', 'success');
     } else {
       if (novelaForm.titulo && novelaForm.genero && novelaForm.capitulos && novelaForm.año) {
         addNovela(novelaForm as Omit<NovelasConfig, 'id'>);
-        alert('Novela agregada correctamente');
+        showNotification('Nueva novela agregada al catálogo', 'success');
       } else {
-        alert('Por favor complete todos los campos obligatorios');
+        showNotification('Por favor complete todos los campos obligatorios', 'warning');
         return;
       }
     }
@@ -83,7 +106,7 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const handleDeleteNovela = (id: number) => {
     if (confirm('¿Está seguro de que desea eliminar esta novela?')) {
       deleteNovela(id);
-      alert('Novela eliminada correctamente');
+      showNotification('Novela eliminada del catálogo', 'info');
     }
   };
 
@@ -92,14 +115,14 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     if (editingZone) {
       updateDeliveryZone(editingZone, deliveryForm);
       setEditingZone(null);
-      alert('Zona de entrega actualizada correctamente');
+      showNotification('Zona de entrega actualizada correctamente', 'success');
     } else {
       if (deliveryForm.name && deliveryForm.fullPath !== undefined && deliveryForm.cost !== undefined) {
         const fullPath = deliveryForm.fullPath || `Santiago de Cuba > Santiago de Cuba > ${deliveryForm.name}`;
         addDeliveryZone({ ...deliveryForm, fullPath } as Omit<DeliveryZoneConfig, 'id'>);
-        alert('Zona de entrega agregada correctamente');
+        showNotification('Nueva zona de entrega agregada', 'success');
       } else {
-        alert('Por favor complete todos los campos obligatorios');
+        showNotification('Por favor complete todos los campos obligatorios', 'warning');
         return;
       }
     }
@@ -119,7 +142,7 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const handleDeleteZone = (id: number) => {
     if (confirm('¿Está seguro de que desea eliminar esta zona de entrega?')) {
       deleteDeliveryZone(id);
-      alert('Zona de entrega eliminada correctamente');
+      showNotification('Zona de entrega eliminada', 'info');
     }
   };
   const handleExport = () => {
@@ -133,16 +156,16 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    alert('Configuración exportada correctamente');
+    showNotification('Configuración JSON exportada correctamente', 'success');
   };
 
   const handleImport = () => {
     if (importConfig(importData)) {
-      alert('Configuración importada correctamente');
+      showNotification('Configuración importada y aplicada correctamente', 'success');
       setImportData('');
       setPricingForm(state.config.pricing);
     } else {
-      alert('Error al importar la configuración. Verifique el formato del archivo.');
+      showNotification('Error al importar la configuración. Verifique el formato del archivo.', 'error');
     }
   };
 
@@ -150,7 +173,7 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     if (confirm('¿Está seguro de que desea restaurar la configuración por defecto? Esta acción no se puede deshacer.')) {
       resetToDefaults();
       setPricingForm(state.config.pricing);
-      alert('Configuración restaurada a valores por defecto');
+      showNotification('Configuración restaurada a valores por defecto', 'info');
     }
   };
 
@@ -169,6 +192,37 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      {/* Sistema de Notificaciones */}
+      <div className="fixed top-4 right-4 z-[60] space-y-2">
+        {notifications.map((notification) => (
+          <div
+            key={notification.id}
+            className={`flex items-center p-4 rounded-lg shadow-lg max-w-sm animate-in slide-in-from-right duration-300 ${
+              notification.type === 'success' ? 'bg-green-500 text-white' :
+              notification.type === 'info' ? 'bg-blue-500 text-white' :
+              notification.type === 'warning' ? 'bg-yellow-500 text-white' :
+              'bg-red-500 text-white'
+            }`}
+          >
+            <div className="mr-3">
+              {notification.type === 'success' && <CheckCircle className="h-5 w-5" />}
+              {notification.type === 'info' && <Info className="h-5 w-5" />}
+              {notification.type === 'warning' && <AlertTriangle className="h-5 w-5" />}
+              {notification.type === 'error' && <XCircle className="h-5 w-5" />}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium">{notification.message}</p>
+            </div>
+            <button
+              onClick={() => removeNotification(notification.id)}
+              className="ml-3 hover:bg-white/20 rounded-full p-1 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+
       <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden shadow-2xl animate-in fade-in duration-300">
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
@@ -748,7 +802,7 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                     <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                       <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
                         <Download className="h-5 w-5 mr-2 text-green-600" />
-                        Exportar Configuración
+                        Exportar Configuración JSON
                       </h4>
                       <p className="text-gray-600 mb-4">
                         Descargue un archivo JSON con toda la configuración actual del sistema (precios, novelas y zonas de entrega).
@@ -758,7 +812,7 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
                       >
                         <Download className="h-5 w-5 mr-2" />
-                        Exportar Configuración
+                        Exportar JSON
                       </button>
                     </div>
 
@@ -803,6 +857,39 @@ export function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                       >
                         <RotateCcw className="h-5 w-5 mr-2" />
                         Restaurar por Defecto
+                      </button>
+                    </div>
+
+                    {/* Nueva Sección: Exportar Archivos del Sistema */}
+                    <div className="bg-white rounded-xl p-6 border border-indigo-200 shadow-sm">
+                      <h4 className="text-lg font-bold text-indigo-900 mb-4 flex items-center">
+                        <FileCode className="h-5 w-5 mr-2 text-indigo-600" />
+                        Exportar Archivos del Sistema Completos
+                      </h4>
+                      <p className="text-indigo-700 mb-4">
+                        <strong>Exportación Avanzada:</strong> Descarga los archivos del código fuente que controlan el sistema (admin.ts, AdminContext.tsx, AdminPanel.tsx, CheckoutModal.tsx, NovelasModal.tsx) con toda la configuración actual aplicada.
+                      </p>
+                      <div className="bg-indigo-50 rounded-lg p-4 mb-4 border border-indigo-200">
+                        <div className="flex items-center mb-2">
+                          <div className="bg-indigo-100 p-2 rounded-lg mr-3">
+                            <FileCode className="h-4 w-4 text-indigo-600" />
+                          </div>
+                          <h5 className="font-semibold text-indigo-900">Archivos que se exportarán:</h5>
+                        </div>
+                        <ul className="text-sm text-indigo-700 ml-11 space-y-1">
+                          <li>• <code>admin.ts</code> - Tipos y configuración actual</li>
+                          <li>• <code>AdminContext.tsx</code> - Contexto con valores aplicados</li>
+                          <li>• <code>AdminPanel.tsx</code> - Panel con configuración actual</li>
+                          <li>• <code>CheckoutModal.tsx</code> - Sistema de checkout sincronizado</li>
+                          <li>• <code>NovelasModal.tsx</code> - Catálogo sincronizado</li>
+                        </ul>
+                      </div>
+                      <button
+                        onClick={exportSystemFiles}
+                        className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
+                      >
+                        <FileCode className="h-5 w-5 mr-2" />
+                        Exportar Archivos del Sistema
                       </button>
                     </div>
                   </div>

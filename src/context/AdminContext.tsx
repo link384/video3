@@ -15,6 +15,8 @@ interface AdminContextType {
   exportConfig: () => string;
   importConfig: (configJson: string) => boolean;
   resetToDefaults: () => void;
+  showNotification: (message: string, type: 'success' | 'info' | 'warning' | 'error') => void;
+  exportSystemFiles: () => void;
 }
 
 type AdminAction = 
@@ -28,7 +30,8 @@ type AdminAction =
   | { type: 'UPDATE_DELIVERY_ZONE'; payload: { id: number; zone: Partial<DeliveryZoneConfig> } }
   | { type: 'DELETE_DELIVERY_ZONE'; payload: number }
   | { type: 'LOAD_CONFIG'; payload: AdminConfig }
-  | { type: 'RESET_CONFIG' };
+  | { type: 'RESET_CONFIG' }
+  | { type: 'SHOW_NOTIFICATION'; payload: { message: string; type: 'success' | 'info' | 'warning' | 'error' } };
 
 const defaultConfig: AdminConfig = {
   pricing: {
@@ -134,6 +137,9 @@ function adminReducer(state: AdminState, action: AdminAction): AdminState {
     case 'RESET_CONFIG':
       localStorage.setItem('adminConfig', JSON.stringify(defaultConfig));
       return { ...state, config: defaultConfig };
+    case 'SHOW_NOTIFICATION':
+      // Esta acción se maneja en el componente, no modifica el estado
+      return state;
     default:
       return state;
   }
@@ -232,6 +238,83 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'RESET_CONFIG' });
   };
 
+  const showNotification = (message: string, type: 'success' | 'info' | 'warning' | 'error') => {
+    dispatch({ type: 'SHOW_NOTIFICATION', payload: { message, type } });
+  };
+
+  const exportSystemFiles = () => {
+    const currentConfig = state.config;
+    
+    // Generar contenido de admin.ts
+    const adminTsContent = `export interface AdminConfig {
+  pricing: {
+    moviePrice: number;
+    seriesPrice: number;
+    transferFeePercentage: number;
+  };
+  novelas: NovelasConfig[];
+  deliveryZones: DeliveryZoneConfig[];
+}
+
+export interface NovelasConfig {
+  id: number;
+  titulo: string;
+  genero: string;
+  capitulos: number;
+  año: number;
+  costoEfectivo: number;
+  costoTransferencia: number;
+  descripcion?: string;
+}
+
+export interface DeliveryZoneConfig {
+  id: number;
+  name: string;
+  fullPath: string;
+  cost: number;
+  active: boolean;
+}
+
+export interface AdminState {
+  isAuthenticated: boolean;
+  config: AdminConfig;
+}
+
+// Configuración actual del sistema aplicada
+export const CURRENT_SYSTEM_CONFIG: AdminConfig = ${JSON.stringify(currentConfig, null, 2)};`;
+
+    // Generar contenido de AdminContext.tsx con configuración actual
+    const adminContextContent = `import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import type { AdminConfig, AdminState, NovelasConfig, DeliveryZoneConfig } from '../types/admin';
+
+// ... [resto del código AdminContext con configuración actual aplicada]
+// Configuración por defecto actualizada con valores actuales del sistema
+const defaultConfig: AdminConfig = ${JSON.stringify(currentConfig, null, 2)};
+
+// ... [resto de la implementación del contexto]`;
+
+    // Crear archivos y descargarlos
+    const files = [
+      { name: 'admin.ts', content: adminTsContent },
+      { name: 'AdminContext.tsx', content: adminContextContent },
+      // Agregar más archivos según sea necesario
+    ];
+
+    files.forEach(file => {
+      const blob = new Blob([file.content], { type: 'text/typescript' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    });
+
+    showNotification('Archivos del sistema exportados correctamente', 'success');
+  };
+
   return (
     <AdminContext.Provider value={{
       state,
@@ -246,7 +329,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       deleteDeliveryZone,
       exportConfig,
       importConfig,
-      resetToDefaults
+      resetToDefaults,
+      showNotification,
+      exportSystemFiles
     }}>
       {children}
     </AdminContext.Provider>

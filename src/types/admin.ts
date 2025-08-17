@@ -29,4 +29,26 @@ export interface DeliveryZoneConfig {
 export interface AdminState {
   isAuthenticated: boolean;
   config: AdminConfig;
+  notifications?: Array<{
+    id: number;
+    message: string;
+    type: 'success' | 'info' | 'warning' | 'error';
+    timestamp: Date;
+  }>;
+}
+
+// Interfaz para el sistema de notificaciones
+export interface AdminNotification {
+  id: number;
+  message: string;
+  type: 'success' | 'info' | 'warning' | 'error';
+  timestamp: Date;
+}
+
+// Interfaz para la exportación de archivos del sistema
+export interface SystemFileExport {
+  fileName: string;
+  content: string;
+  type: 'typescript' | 'tsx';
+  description: string;
 }
