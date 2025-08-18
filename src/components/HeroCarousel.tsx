@@ -35,7 +35,6 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
           }
           
           // Fallback to API call
-          const isMovie = 'title' in item;
           const videoData = isMovie 
             ? await tmdbService.getMovieVideos(item.id)
             : await tmdbService.getTVShowVideos(item.id);
