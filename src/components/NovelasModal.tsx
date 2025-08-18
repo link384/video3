@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, MessageCircle, Phone, BookOpen, Info, Check, DollarSign, CreditCard, Calculator } from 'lucide-react';
+import { X, Download, MessageCircle, Phone, BookOpen, Info, Check, DollarSign, CreditCard, Calculator, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
 
 interface Novela {
   id: number;
@@ -21,6 +21,11 @@ export function NovelasModal({ isOpen, onClose }: NovelasModalProps) {
   const [novelasWithPayment, setNovelasWithPayment] = useState<Novela[]>([]);
   const [showContactOptions, setShowContactOptions] = useState(false);
   const [showNovelList, setShowNovelList] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+  const [sortBy, setSortBy] = useState<'titulo' | 'año' | 'capitulos'>('titulo');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Lista de novelas basada en el documento
   const novelas: Novela[] = [
@@ -78,6 +83,46 @@ export function NovelasModal({ isOpen, onClose }: NovelasModalProps) {
 
   const phoneNumber = '+5354690878';
 
+  // Obtener géneros únicos
+  const uniqueGenres = [...new Set(novelas.map(novela => novela.genero))].sort();
+  
+  // Obtener años únicos
+  const uniqueYears = [...new Set(novelas.map(novela => novela.año))].sort((a, b) => b - a);
+
+  // Función para filtrar novelas
+  const getFilteredNovelas = () => {
+    let filtered = novelasWithPayment.filter(novela => {
+      const matchesSearch = novela.titulo.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesGenre = selectedGenre === '' || novela.genero === selectedGenre;
+      const matchesYear = selectedYear === '' || novela.año.toString() === selectedYear;
+      
+      return matchesSearch && matchesGenre && matchesYear;
+    });
+
+    // Ordenar resultados
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'titulo':
+          comparison = a.titulo.localeCompare(b.titulo);
+          break;
+        case 'año':
+          comparison = a.año - b.año;
+          break;
+        case 'capitulos':
+          comparison = a.capitulos - b.capitulos;
+          break;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
+    return filtered;
+  };
+
+  const filteredNovelas = getFilteredNovelas();
+
   // Inicializar novelas con tipo de pago por defecto
   useEffect(() => {
     const novelasWithDefaultPayment = novelas.map(novela => ({
@@ -113,6 +158,14 @@ export function NovelasModal({ isOpen, onClose }: NovelasModalProps) {
 
   const clearAllNovelas = () => {
     setSelectedNovelas([]);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedGenre('');
+    setSelectedYear('');
+    setSortBy('titulo');
+    setSortOrder('asc');
   };
 
   // Calcular totales por tipo de pago
@@ -412,6 +465,89 @@ export function NovelasModal({ isOpen, onClose }: NovelasModalProps) {
             {/* Lista de novelas */}
             {showNovelList && (
               <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+                {/* Filtros */}
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 border-b border-gray-200">
+                  <div className="flex items-center mb-4">
+                    <Filter className="h-5 w-5 text-purple-600 mr-2" />
+                    <h4 className="text-lg font-bold text-purple-900">Filtros de Búsqueda</h4>
+                  </div>
+                  
+                  {/* Barra de búsqueda */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Buscar por título..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                    </div>
+                    
+                    <select
+                      value={selectedGenre}
+                      onChange={(e) => setSelectedGenre(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="">Todos los géneros</option>
+                      {uniqueGenres.map(genre => (
+                        <option key={genre} value={genre}>{genre}</option>
+                      ))}
+                    </select>
+                    
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="">Todos los años</option>
+                      {uniqueYears.map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                    
+                    <div className="flex space-x-2">
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as 'titulo' | 'año' | 'capitulos')}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                      >
+                        <option value="titulo">Título</option>
+                        <option value="año">Año</option>
+                        <option value="capitulos">Capítulos</option>
+                      </select>
+                      
+                      <button
+                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                        className="px-3 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg transition-colors"
+                        title={`Ordenar ${sortOrder === 'asc' ? 'descendente' : 'ascendente'}`}
+                      >
+                        {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Botón limpiar filtros y contador de resultados */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                    <div className="text-sm text-purple-700">
+                      Mostrando {filteredNovelas.length} de {novelas.length} novelas
+                      {(searchTerm || selectedGenre || selectedYear) && (
+                        <span className="ml-2 text-purple-600">• Filtros activos</span>
+                      )}
+                    </div>
+                    
+                    {(searchTerm || selectedGenre || selectedYear || sortBy !== 'titulo' || sortOrder !== 'asc') && (
+                      <button
+                        onClick={clearFilters}
+                        className="text-sm bg-purple-200 hover:bg-purple-300 text-purple-800 px-3 py-1 rounded-lg transition-colors"
+                      >
+                        Limpiar filtros
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-4 border-b border-gray-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
                     <h4 className="text-lg font-bold text-gray-900">
@@ -477,7 +613,8 @@ export function NovelasModal({ isOpen, onClose }: NovelasModalProps) {
 
                 <div className="max-h-96 overflow-y-auto p-4">
                   <div className="grid grid-cols-1 gap-3">
-                    {novelasWithPayment.map((novela) => {
+                    {filteredNovelas.length > 0 ? (
+                      filteredNovelas.map((novela) => {
                       const isSelected = selectedNovelas.includes(novela.id);
                       const baseCost = novela.capitulos * 5;
                       const transferCost = Math.round(baseCost * 1.1);
@@ -572,7 +709,24 @@ export function NovelasModal({ isOpen, onClose }: NovelasModalProps) {
                           </div>
                         </div>
                       );
-                    })}
+                      })
+                    ) : (
+                      <div className="text-center py-8">
+                        <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          No se encontraron novelas
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                          No hay novelas que coincidan con los filtros seleccionados.
+                        </p>
+                        <button
+                          onClick={clearFilters}
+                          className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                        >
+                          Limpiar filtros
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
