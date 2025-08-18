@@ -21,8 +21,20 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
   // Cargar videos para cada item
   useEffect(() => {
     const loadVideos = async () => {
+      // First try to get cached videos
+      const cachedVideos: { [key: number]: Video[] } = {};
+      
       const videoPromises = items.map(async (item) => {
         try {
+          // Check cache first
+          const isMovie = 'title' in item;
+          const cachedVideoData = contentSyncService?.getCachedVideos?.(item.id, isMovie ? 'movie' : 'tv');
+          
+          if (cachedVideoData && cachedVideoData.length > 0) {
+            return { id: item.id, videos: cachedVideoData };
+          }
+          
+          // Fallback to API call
           const isMovie = 'title' in item;
           const videoData = isMovie 
             ? await tmdbService.getMovieVideos(item.id)
