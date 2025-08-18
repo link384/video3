@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Star, Calendar, Play, Pause } from 'lucide-react';
 import { tmdbService } from '../services/tmdb';
+import { contentSyncService } from '../services/contentSync';
 import { IMAGE_BASE_URL, BACKDROP_SIZE } from '../config/api';
 import type { Movie, TVShow, Video } from '../types/movie';
 
